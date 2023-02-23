@@ -22,7 +22,7 @@ namespace jsonPacketMaker {
   //void handle_rrc_reject(uint8_t waitTime, int size);
   
   // NAS
-  void handle_nas_security_mode_command(uint8_t* original_msg, int rrcTransactionIdentifier, uint8_t* MAC, int sn, int size);
+  void handle_nas_security_mode_command(uint8_t* original_msg, int rrcTransactionIdentifier, std::string dedicatedNas, int size, const rapidjson::Value& obj);
 }
 
 #endif

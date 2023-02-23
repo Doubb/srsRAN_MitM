@@ -35,6 +35,7 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
   const char* rrcSetupComplete = "rrcSetupComplete";
 
   int isSetupComplete = 0;
+  int isNasSecurityModeCommand = 0;
 
   // NAS
   const char* dlInfoTransfer = "dlInformationTransfer";
@@ -55,14 +56,14 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
 
   for (Value::ConstValueIterator itrr = d.Begin(); itrr != d.End(); ++itrr) {
     const Value& o = *itrr;
-    if (isSetupComplete == 1) {
+    if (isSetupComplete == 1 || isNasSecurityModeCommand == 1) {
       break;
     }
     std::cout << "I'm Here" << std::endl;
 
   for (Value::ConstValueIterator itr = o.Begin(); itr != o.End(); ++itr) {
     const Value& obj = *itr;
-    if (isSetupComplete == 1) {
+    if (isSetupComplete == 1 || isNasSecurityModeCommand == 1) {
       break;
     }
     std::cout << "I'm Here2" << std::endl;
@@ -189,11 +190,20 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
 
 		   }
 
-		   else if (strcmp(dlInfoTransfer, content->name.GetString()) == 0) { // If DL Info Transfer (NAS)
-	             std::cout << buf << std::endl;
-		     uint8_t* MAC;
-		     int sn = 0;
-		     handle_nas_security_mode_command(original_msg, rrcTransactionIdentifier, MAC, sn, size);
+		   else if (strcmp(dlInfoTransfer, content->name.GetString()) == 0 && size == 30) { // If DL Info Transfer with size 30 (NAS Security Mode Command)
+	             //std::cout << buf << std::endl;
+                     const Value& obj7 = content->value;
+
+		     for(Value::ConstMemberIterator dedNas = obj7.MemberBegin(); dedNas != obj7.MemberEnd(); ++dedNas) {
+		       std::cout << dedNas->name.GetString() << ": ";
+                       dedicatedNAS = dedNas->value.GetString();
+		     }
+
+		     std::cout << "DL Info Transfer with NAS Security Mode Command" << std::endl;
+		     ++itrr;
+		     const Value& obj_ = *itrr;
+		     handle_nas_security_mode_command(original_msg, rrcTransactionIdentifier, dedicatedNAS, size, obj_);
+		     isNasSecurityModeCommand = 1;
 		   }
 
 		   else if (strcmp(rrcSetupComplete, content->name.GetString()) == 0) { // If RRC Setup Complete (RRC + NAS)
@@ -1162,7 +1172,7 @@ void jsonPacketMaker::handle_rrc_setup_complete(uint8_t* original_msg, int rrcTr
   
 }
 
-void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, int rrcTransactionIdentifier, uint8_t* MAC, int sn, int size) {
+void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, int rrcTransactionIdentifier, std::string dedicatedNAS, int size, const rapidjson::Value& obj) {
   struct msg_struct {
     uint32_t channel;
     uint8_t msg[32768];
@@ -1171,27 +1181,462 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
   std::cout << "\n";
   std::cout << "Spoofing NAS Security Mode Command" << std::endl;
   std::cout << "RRC Transaction Identifier: " << rrcTransactionIdentifier << std::endl;
-  std::cout << "Message Authentication Code: " << MAC << std::endl;
-  std::cout << "Sequence Number: " << sn << std::endl;
+  std::cout << "Dedicated NAS Message: " << dedicatedNAS << std::endl;
   std::cout << "\n";
   
+  // 5GS Mobility Management
+  std::string extended_protocol_discriminator = "";
+  std::string security_header_type = "";
+  uint64_t message_authentication_code = 0;
+  unsigned int sequence_number = 0;
+
+  // Selected NAS Security Algorithms 1
+  std::string type_of_ciphering_algorithm = "";
+  std::string type_of_integrity_algorithm = "";
+
+  // Selected NAS Security Algorithms 1
+  std::string security_context_flag = "";
+  std::string nas_key_set_identifier = "";
+
+  // Replayed UE Security Capabilities
+  int _5g_ea0 = 0;
+  int _128_5g_ea1 = 0;
+  int _128_5g_ea2 = 0;
+  int _128_5g_ea3 = 0;
+  int _5g_ea4 = 0;
+  int _5g_ea5 = 0;
+  int _5g_ea6 = 0;
+  int _5g_ea7 = 0;
+  int _5g_ia0 = 0;
+  int _128_5g_ia1 = 0;
+  int _128_5g_ia2 = 0;
+  int _128_5g_ia3 = 0;
+  int _5g_ia4 = 0;
+  int _5g_ia5 = 0;
+  int _5g_ia6 = 0;
+  int _5g_ia7 = 0;
+
+  // IMEISV Request
+  std::string imeisv_request_value = "";
+
+  // Additional 5G Security Information
+  int rinmr = 0;
+  int hdp = 0;
+
+  asn1::rrc_nr::dl_dcch_msg_s dl_dcch_msg;
+  asn1::rrc_nr::dl_info_transfer_ies_s* dl_info_transfer = &dl_dcch_msg.msg.set_c1().set_dl_info_transfer().crit_exts.set_dl_info_transfer();
+  dl_dcch_msg.msg.c1().dl_info_transfer().rrc_transaction_id = rrcTransactionIdentifier;
+
+  // Transform NAS JSON into NAS Message
+  for (Value::ConstValueIterator itr = obj.Begin(); itr != obj.End(); ++itr) {
+    const Value& o = *itr;
+    for (Value::ConstMemberIterator mm = o.MemberBegin(); mm != o.MemberEnd(); ++mm) {
+      //std::cout << "GOT" << std::endl;
+      std::cout << mm->name.GetString() << ": " << std::endl;
+
+      const Value& obj2 = mm->value;
+      for (Value::ConstMemberIterator msg = obj2.MemberBegin(); msg != obj2.MemberEnd(); ++msg) {
+        std::cout << msg->name.GetString() << ": ";
+	if (strcmp(msg->name.GetString(), "Extended protocol discriminator") == 0) {
+          std::cout << msg->value.GetString() << ", " << std::endl;
+	  extended_protocol_discriminator = msg->value.GetString();
+	}
+
+	else if (strcmp(msg->name.GetString(), "Security header type") == 0) {
+          std::cout << msg->value.GetString() << ", " << std::endl;
+	  security_header_type = msg->value.GetString();
+	}
+
+	else if (strcmp(msg->name.GetString(), "Message authentication code") == 0) {
+          std::cout << msg->value.GetUint64() << ", " << std::endl;
+	  message_authentication_code = msg->value.GetUint64();
+	}
+
+	else if (strcmp(msg->name.GetString(), "Sequence number") == 0) {
+          std::cout << msg->value.GetInt() << ", " << std::endl;
+	  sequence_number = msg->value.GetInt();
+	}
+
+	else if (strcmp(msg->name.GetString(), "Security mode command") == 0) {
+          const Value& obj3 = msg->value;
+
+	  for (Value::ConstMemberIterator request = obj3.MemberBegin(); request != obj3.MemberEnd(); ++request) {
+            std::cout << request->name.GetString() << ": " << std::endl;
+
+	    const Value& obj4 = request->value;
+	    for (Value::ConstMemberIterator fields = obj4.MemberBegin(); fields != obj4.MemberEnd(); ++fields) {
+              std::cout << fields->name.GetString() << ": ";
+
+	      if (strcmp(fields->name.GetString(), "Type of ciphering algorithm") == 0) {
+                std::cout << fields->value.GetString() << ", " << std::endl;
+		type_of_ciphering_algorithm = fields->value.GetString();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "Type of integrity algorithm") == 0) {
+                std::cout << fields->value.GetString() << ", " << std::endl;
+		type_of_integrity_algorithm = fields->value.GetString();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "Security context flag") == 0) {
+                std::cout << fields->value.GetString() << ", " << std::endl;
+		security_context_flag = fields->value.GetString();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "Nas key set identifier") == 0) {
+                std::cout << fields->value.GetString() << ", " << std::endl;
+		nas_key_set_identifier = fields->value.GetString();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-EA0") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ea0 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-EA1") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ea1 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-EA2") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ea2 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-EA3") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ea3 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-EA4") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ea4 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-EA5") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ea5 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-EA6") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ea6 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-EA7") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ea7 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-IA0") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ia0 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-IA1") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ia1 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-IA2") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ia2 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "128-5G-IA3") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_128_5g_ia3 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-IA4") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ia4 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-IA5") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ia5 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-IA6") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ia6 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "5G-IA7") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		_5g_ia7 = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "IMEISV request value") == 0) {
+                std::cout << fields->value.GetString() << ", " << std::endl;
+		imeisv_request_value = fields->value.GetString();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "RINMR") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		rinmr = fields->value.GetInt();
+	      }
+
+	      else if (strcmp(fields->name.GetString(), "HDP") == 0) {
+                std::cout << fields->value.GetInt() << ", " << std::endl;
+		hdp = fields->value.GetInt();
+	      }
+
+	      else {
+                std::cout << "Undefined Field Error" << std::endl;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  }
+  
+
+  srsran::unique_byte_buffer_t nas_msg = srsran::make_byte_buffer();
+  if (!nas_msg) {
+    std::cout << "Couldn't allocate NAS Message" << std::endl;
+  }
+
+  srsran::nas_5g::nas_5gs_msg initial_security_mode_command_stored;
+
+  // Extended Protocol Discriminator
+  if (strcmp(extended_protocol_discriminator.c_str(), "5gmm") == 0) {
+    initial_security_mode_command_stored.hdr.extended_protocol_discriminator = srsran::nas_5g::nas_5gs_hdr::extended_protocol_discriminator_opts::extended_protocol_discriminator_5gmm;
+  }
+
+  else {
+    initial_security_mode_command_stored.hdr.extended_protocol_discriminator = srsran::nas_5g::nas_5gs_hdr::extended_protocol_discriminator_opts::extended_protocol_discriminator_5gsm;
+  }
+
+  // Security Header Type
+  if (strcmp(security_header_type.c_str(), "Plain 5gs nas message") == 0) {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::plain_5gs_nas_message;
+  }
+
+  else if (strcmp(security_header_type.c_str(), "Integrity protected") == 0) {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::integrity_protected;
+  }
+
+  else if (strcmp(security_header_type.c_str(), "Integrity protected and ciphered") == 0) {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::integrity_protected_and_ciphered;
+  }
+
+  else if (strcmp(security_header_type.c_str(), "Integrity protected with new 5G nas context") == 0) {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::integrity_protected_with_new_5G_nas_context;
+  }
+
+  else if (strcmp(security_header_type.c_str(), "Integrity protected and ciphered with new 5G nas context") == 0) {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::integrity_protected_and_ciphered_with_new_5G_nas_context;
+  }
+
+  else {
+    initial_security_mode_command_stored.hdr.security_header_type = srsran::nas_5g::nas_5gs_hdr::security_header_type_opts::plain_5gs_nas_message;
+  }
+
+  // Message Authentication Code & Sequence Number
+  initial_security_mode_command_stored.hdr.message_authentication_code = message_authentication_code;
+  initial_security_mode_command_stored.hdr.sequence_number = sequence_number;
+
+  //srsepc::nas::pack_security_mode_command(nas_msg.get());
+  
+  //LIBLTE_MME_SECURITY_MODE_COMMAND_MSG_STRUCT sm_cmd;
+  srsran::nas_5g::security_mode_command_t& sm_cmd = initial_security_mode_command_stored.set_security_mode_command();
+  sm_cmd.imeisv_request_present = true;
+  sm_cmd.additional_5g_security_information_present = true;
+
+  // Type of Ciphering Algorithm
+  if (strcmp(type_of_ciphering_algorithm.c_str(), "EA0-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea0_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA1-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea1_128_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA2-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea2_128_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA3-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea3_128_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA4-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea4_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA5-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea5_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA6-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea6_5g;
+  }
+
+  else if (strcmp(type_of_ciphering_algorithm.c_str(), "EA6-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.ciphering_algorithm = srsran::nas_5g::security_algorithms_t::ciphering_algorithm_type_::options::ea7_5g;
+  }
+
+  // Type of Integrity Algorithm
+  if (strcmp(type_of_integrity_algorithm.c_str(), "IA0-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia0_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA1-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia1_128_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA2-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia2_128_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA3-128-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia3_128_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA4-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia4_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA5-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia5_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA6-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia6_5g;
+  }
+
+  else if (strcmp(type_of_integrity_algorithm.c_str(), "IA7-5G") == 0) {
+    sm_cmd.selected_nas_security_algorithms.integrity_protection_algorithm = srsran::nas_5g::security_algorithms_t::integrity_protection_algorithm_type_::options::ia7_5g;
+  }
+
+  // Security Context Flag
+  if (strcmp(security_context_flag.c_str(), "native security context") == 0) {
+    sm_cmd.ng_ksi.security_context_flag = srsran::nas_5g::key_set_identifier_t::security_context_flag_type_::options::native_security_context;
+  }
+
+  else {
+    sm_cmd.ng_ksi.security_context_flag = srsran::nas_5g::key_set_identifier_t::security_context_flag_type_::options::mapped_security_context;
+  }
+
+  // Nas Key Set identifier (Only one option)
+  sm_cmd.ng_ksi.nas_key_set_identifier = srsran::nas_5g::key_set_identifier_t::nas_key_set_identifier_type_::options::no_key_is_available_or_reserved;
+
+  // Replayed UE Security Capabilities
+  if (_5g_ea0 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea0_5g_supported = true;
+  }
+
+  if (_128_5g_ea1 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea1_128_5g_supported = true;
+  }
+
+  if (_128_5g_ea2 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea2_128_5g_supported = true;
+  }
+
+  if (_128_5g_ea3 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea3_128_5g_supported = true;
+  }
+
+  if (_5g_ea4 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea4_5g_supported = true;
+  }
+
+  if (_5g_ea5 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea5_5g_supported = true;
+  }
+
+  if (_5g_ea6 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea6_5g_supported = true;
+  }
+
+  if (_5g_ea7 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ea7_5g_supported = true;
+  }
+
+  if (_5g_ia0 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia0_5g_supported = true;
+  }
+
+  if (_128_5g_ia1 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia1_128_5g_supported = true;
+  }
+
+  if (_128_5g_ia2 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia2_128_5g_supported = true;
+  }
+
+  if (_128_5g_ia3 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia3_128_5g_supported = true;
+  }
+
+  if (_5g_ia4 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia4_5g_supported = true;
+  }
+
+  if (_5g_ia5 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia5_5g_supported = true;
+  }
+
+  if (_5g_ia6 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia6_5g_supported = true;
+  }
+
+  if (_5g_ia7 == 1) {
+    sm_cmd.replayed_ue_security_capabilities.ia7_5g_supported = true;
+  }
+
+  // IMEISV Request Value
+  if (strcmp(imeisv_request_value.c_str(), "IMEISV requested") == 0) {
+    sm_cmd.imeisv_request.imeisv_request = srsran::nas_5g::imeisv_request_t::imeisv_request_type_::options::imeisv_requested;
+  }
+
+  else {
+    sm_cmd.imeisv_request.imeisv_request = srsran::nas_5g::imeisv_request_t::imeisv_request_type_::options::imeisv_not_requested;
+  }
+
+  // RINMR & HDP
+  if (rinmr == 1) {
+    sm_cmd.additional_5g_security_information.rinmr = true;
+  }
+
+  if (hdp == 1) {
+    sm_cmd.additional_5g_security_information.hdp = true;
+  }
+  
+  initial_security_mode_command_stored.pack(nas_msg);
+
+  dl_info_transfer->ded_nas_msg.resize(nas_msg->N_bytes);
+  memcpy(dl_info_transfer->ded_nas_msg.data(), nas_msg->msg, nas_msg->N_bytes);
+   
+  asn1::rrc_nr::dl_dcch_msg_s& msg = dl_dcch_msg;
   srsran::unique_byte_buffer_t pdu = srsran::make_byte_buffer();
   if (pdu == nullptr) {
     std::cout << "pdu creation failed" << std::endl;
   }
-  asn1::bit_ref msg_bref(pdu->msg, pdu->get_tailroom());
 
-  srsran::nas_5g::nas_5gs_hdr hdr;
-  srslog::detail::any msg_container = srslog::detail::any{srsran::nas_5g::security_mode_command_t()};
-  srsran::nas_5g::security_mode_command_t* msg = srslog::detail::any_cast<srsran::nas_5g::security_mode_command_t>(&msg_container);
-  
-  hdr.pack(msg_bref);
-  msg->pack(msg_bref);
+  asn1::bit_ref bref(pdu->msg, pdu->get_tailroom());
+  msg.pack(bref);
+  bref.align_bytes_zero();
+  pdu->N_bytes = (uint32_t)bref.distance_bytes(pdu->msg);
+  pdu->set_timestamp();
 
-  asn1::json_writer *json_buf = new asn1::json_writer();
-  hdr.to_json(*json_buf);
-  msg->to_json(*json_buf);
-  std::cout << json_buf->to_string() << std::endl;
+  memcpy(&msg_buffer, original_msg, size);
+  memcpy(msg_buffer.msg, pdu->msg, pdu->N_bytes);
+  memcpy(msg_buffer_bytes, &msg_buffer, size);
+
+  for (int i=0; i<size; i++) {
+    std::cout << std::to_string(msg_buffer_bytes[i]) << " ";
+  }
+  std::cout << "\n";
+
+  asn1::json_writer* json_buffer = new asn1::json_writer;
+  json_buffer->start_array();
+  int result = gNB::decode_packet(msg_buffer_bytes, size, *json_buffer);
+  json_buffer->end_array();
+  std::cout << json_buffer->to_string() << std::endl;
 }
 
 /*
