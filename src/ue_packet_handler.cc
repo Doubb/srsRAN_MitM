@@ -39,7 +39,7 @@ int UE::decode_packet(uint8_t *buf, int n, asn1::json_writer & json_buffer)
         break;
     }
 
-    return 0;
+    return -1;
 }
 
 int decode_ul_dcch(uint8_t * buf, int n, asn1::json_writer & json_buffer)
@@ -120,5 +120,5 @@ int decode_ul_ccch(uint8_t * buf, int n, asn1::json_writer & json_buffer)
 
     ul_ccch_msg.to_json(json_buffer);
 
-    return 0;
+    return 1;
 }
