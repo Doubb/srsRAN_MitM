@@ -605,13 +605,28 @@ void jsonPacketMaker::handle_rrc_setup_complete(uint8_t* original_msg, int rrcTr
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "MCC") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		mcc = fields->value.GetInt();
+		if (fields->value.IsInt()) {
+                  std::cout << fields->value.GetInt() << ", " << std::endl;
+		  mcc = fields->value.GetInt();
+		}
+		else if (fields->value.IsString()) {
+                  std::cout << fields->value.GetString() << ", " << std::endl;
+		  std::stringstream ssInt(fields->value.GetString());
+		  ssInt >> mcc;
+		}
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "MNC") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		mnc = fields->value.GetInt();
+		if (fields->value.IsInt()) {
+                  std::cout << fields->value.GetInt() << ", " << std::endl;
+		  mnc = fields->value.GetInt();
+		}
+
+		else if (fields->value.IsString()) {
+                  std::cout << fields->value.GetString() << ", " << std::endl;
+		  std::stringstream ssInt(fields->value.GetString());
+		  ssInt >> mnc;
+		}
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "Routing indicator") == 0) {
