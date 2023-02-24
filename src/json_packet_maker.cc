@@ -1248,8 +1248,15 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 	}
 
 	else if (strcmp(msg->name.GetString(), "Message authentication code") == 0) {
-          std::cout << msg->value.GetUint64() << ", " << std::endl;
-	  message_authentication_code = msg->value.GetUint64();
+	  if (msg->value.IsUint64()) {
+            std::cout << msg->value.GetUint64() << ", " << std::endl;
+	    message_authentication_code = msg->value.GetUint64();
+	  }
+
+	  else if (msg->value.IsString()) {
+            std::cout << msg->value.GetString() << ", " << std::endl;
+	    message_authentication_code = (uint64_t)msg->value.GetString();
+	  }
 	}
 
 	else if (strcmp(msg->name.GetString(), "Sequence number") == 0) {
@@ -1293,8 +1300,17 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA1") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea1 = fields->value.GetInt();
+		if (fields->value.IsInt()) {
+                  std::cout << fields->value.GetInt() << ", " << std::endl;
+		  _128_5g_ea1 = fields->value.GetInt();
+		}
+
+		else if (fields->value.IsString()) {
+                  std::cout << fields->value.GetString() << ", " << std::endl;
+		  std::stringstream ssInt(fields->value.GetString());
+		  ssInt >> _128_5g_ea1;
+		  //_128_5g_ea1 = ()fields->value.GetString();
+		}
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA2") == 0) {
