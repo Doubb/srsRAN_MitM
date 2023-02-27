@@ -23,6 +23,10 @@ namespace jsonPacketMaker {
   
   // NAS
   void handle_nas_security_mode_command(uint8_t* original_msg, int rrcTransactionIdentifier, std::string dedicatedNas, int size, const rapidjson::Value& obj);
+
+  // Util
+  int string_to_number(const rapidjson::Value& value);
 }
+  
 
 #endif

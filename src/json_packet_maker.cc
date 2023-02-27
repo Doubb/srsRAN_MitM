@@ -11,6 +11,7 @@
 #include "mitm_lib/asn1/nas_5g_utils.h"
 #include "../src/ue_packet_handler.h"
 #include "../src/gnb_packet_handler.h"
+#include <sstream>
 
 using namespace rapidjson;
 
@@ -87,8 +88,9 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
                std::cout << contents->name.GetString() << ": ";
 
 	       if (strcmp(criticalExtension, contents->name.GetString()) != 0) {
-                 std::cout << contents->value.GetInt() << ": ";
-	         rrcTransactionIdentifier = contents->value.GetInt();
+                 //std::cout << contents->value.GetInt() << ": ";
+	         //rrcTransactionIdentifier = contents->value.GetInt();
+		 rrcTransactionIdentifier = string_to_number(contents->value);
 	       }
 
 	       else {
@@ -155,7 +157,8 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
 
 		     for(Value::ConstMemberIterator time = obj7.MemberBegin(); time != obj7.MemberEnd(); ++time) {
                        std::cout << time->name.GetString() << ": ";
-		       waitTime = time->value.GetInt();
+		       //waitTime = time->value.GetInt();
+		       waitTime = string_to_number(time->value);
 		       handle_rrc_reject(original_msg, waitTime, size);
 		     }
 		   }
@@ -212,7 +215,8 @@ uint8_t* jsonPacketMaker::json_to_packet(std::string buf, uint8_t* original_msg,
 		     for(Value::ConstMemberIterator plmn = obj7.MemberBegin(); plmn != obj7.MemberEnd(); ++plmn) {
                        std::cout << plmn->name.GetString() << ": ";
 		       if (plmn->value.IsInt()) {
-                         plmnIdentity = plmn->value.GetInt();
+                         //plmnIdentity = plmn->value.GetInt();
+			 plmnIdentity = string_to_number(plmn->value);
 		       }
 
 		       else {
@@ -630,8 +634,9 @@ void jsonPacketMaker::handle_rrc_setup_complete(uint8_t* original_msg, int rrcTr
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "Routing indicator") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		routing_indicator = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//routing_indicator = fields->value.GetInt();
+		routing_indicator = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "Protection scheme Id") == 0) {
@@ -640,8 +645,9 @@ void jsonPacketMaker::handle_rrc_setup_complete(uint8_t* original_msg, int rrcTr
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "Home network public key identifier") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		home_network_public_key_identifier = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//home_network_public_key_identifier = fields->value.GetInt();
+		home_network_public_key_identifier = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "Scheme output") == 0) {
@@ -650,83 +656,99 @@ void jsonPacketMaker::handle_rrc_setup_complete(uint8_t* original_msg, int rrcTr
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA0") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea0 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea0 = fields->value.GetInt();
+		_5g_ea0 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA1") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea1 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ea1 = fields->value.GetInt();
+		_128_5g_ea1 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA2") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea2 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ea2 = fields->value.GetInt();
+		_128_5g_ea2 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA3") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea3 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ea3 = fields->value.GetInt();
+		_128_5g_ea3 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA4") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea4 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea4 = fields->value.GetInt();
+		_5g_ea4 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA5") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea5 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea5 = fields->value.GetInt();
+		_5g_ea5 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA6") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea6 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea6 = fields->value.GetInt();
+		_5g_ea6 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA7") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea7 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea7 = fields->value.GetInt();
+		_5g_ea7 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA0") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia0 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia0 = fields->value.GetInt();
+		_5g_ia0 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA1") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia1 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia1 = fields->value.GetInt();
+		_128_5g_ia1 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA2") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia2 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia2 = fields->value.GetInt();
+		_128_5g_ia2 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA3") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia3 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia3 = fields->value.GetInt();
+		_128_5g_ia3 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA4") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia4 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia4 = fields->value.GetInt();
+		_5g_ia4 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA5") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia5 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia5 = fields->value.GetInt();
+		_5g_ia5 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA6") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia6 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia6 = fields->value.GetInt();
+		_5g_ia6 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA7") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia7 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia7 = fields->value.GetInt();
+		_5g_ia7 = string_to_number(fields->value);
 	      }
 
 	      else {
@@ -1275,8 +1297,9 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 	}
 
 	else if (strcmp(msg->name.GetString(), "Sequence number") == 0) {
-          std::cout << msg->value.GetInt() << ", " << std::endl;
-	  sequence_number = msg->value.GetInt();
+          //std::cout << msg->value.GetInt() << ", " << std::endl;
+	  //sequence_number = msg->value.GetInt();
+	  sequence_number = string_to_number(msg->value);
 	}
 
 	else if (strcmp(msg->name.GetString(), "Security mode command") == 0) {
@@ -1310,11 +1333,13 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA0") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea0 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea0 = fields->value.GetInt();
+		_5g_ea0 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA1") == 0) {
+		/*
 		if (fields->value.IsInt()) {
                   std::cout << fields->value.GetInt() << ", " << std::endl;
 		  _128_5g_ea1 = fields->value.GetInt();
@@ -1326,76 +1351,92 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 		  ssInt >> _128_5g_ea1;
 		  //_128_5g_ea1 = ()fields->value.GetString();
 		}
+		*/
+		_128_5g_ea1 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA2") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea2 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ea2 = fields->value.GetInt();
+		_128_5g_ea2 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-EA3") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ea3 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ea3 = fields->value.GetInt();
+		_128_5g_ea3 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA4") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea4 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea4 = fields->value.GetInt();
+		_5g_ea4 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA5") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea5 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea5 = fields->value.GetInt();
+		_5g_ea5 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA6") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea6 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea6 = fields->value.GetInt();
+		_5g_ea6 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-EA7") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ea7 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ea7 = fields->value.GetInt();
+		_5g_ea7 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA0") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia0 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia0 = fields->value.GetInt();
+		_5g_ia0 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA1") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia1 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia1 = fields->value.GetInt();
+		_128_5g_ia1 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA2") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia2 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia2 = fields->value.GetInt();
+		_128_5g_ia2 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "128-5G-IA3") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_128_5g_ia3 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_128_5g_ia3 = fields->value.GetInt();
+		_128_5g_ia3 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA4") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia4 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia4 = fields->value.GetInt();
+		_5g_ia4 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA5") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia5 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia5 = fields->value.GetInt();
+		_5g_ia5 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA6") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia6 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia6 = fields->value.GetInt();
+		_5g_ia6 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "5G-IA7") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		_5g_ia7 = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//_5g_ia7 = fields->value.GetInt();
+		_5g_ia7 = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "IMEISV request value") == 0) {
@@ -1404,13 +1445,15 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "RINMR") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		rinmr = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//rinmr = fields->value.GetInt();
+		rinmr = string_to_number(fields->value);
 	      }
 
 	      else if (strcmp(fields->name.GetString(), "HDP") == 0) {
-                std::cout << fields->value.GetInt() << ", " << std::endl;
-		hdp = fields->value.GetInt();
+                //std::cout << fields->value.GetInt() << ", " << std::endl;
+		//hdp = fields->value.GetInt();
+		hdp = string_to_number(fields->value);
 	      }
 
 	      else {
@@ -1668,6 +1711,23 @@ void jsonPacketMaker::handle_nas_security_mode_command(uint8_t* original_msg, in
   int result = gNB::decode_packet(msg_buffer_bytes, size, *json_buffer);
   json_buffer->end_array();
   std::cout << json_buffer->to_string() << std::endl;
+}
+
+int jsonPacketMaker::string_to_number(const Value& value) {
+  int result = 0;
+
+  if (value.IsInt()) {
+    std::cout << value.GetInt() << ", " << std::endl;
+    result = value.GetInt();
+  }
+
+  else if (value.IsString()) {
+    std::cout << value.GetString() << ", " << std::endl;
+    std::stringstream ssInt(value.GetString());
+    ssInt >> result;
+  }
+
+  return result;
 }
 
 /*
