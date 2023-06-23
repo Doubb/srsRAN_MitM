@@ -4199,21 +4199,30 @@ void nas_5gs_hdr::to_json(json_writer & j) const
         {
           case integrity_protected:
             j.write_str("Security header type", "Integrity protected");
+            j.write_int("Message authentication code", message_authentication_code);
+            j.write_int("Sequence number", sequence_number);
+            // j.write_str("Message type", message_type.to_string());
             break;
           case integrity_protected_and_ciphered:
             j.write_str("Security header type", "Integrity protected and ciphered");
+            j.write_int("Message authentication code", message_authentication_code);
+            j.write_int("Sequence number", sequence_number);
             break;
           case integrity_protected_with_new_5G_nas_context:
             j.write_str("Security header type", "Integrity protected with new 5G nas context");
+            j.write_int("Message authentication code", message_authentication_code);
+            j.write_int("Sequence number", sequence_number);
+            // j.write_str("Message type", message_type.to_string());
             break;    
           case integrity_protected_and_ciphered_with_new_5G_nas_context:
             j.write_str("Security header type", "Integrity protected and ciphered with new 5G nas context");
+            j.write_int("Message authentication code", message_authentication_code);
+            j.write_int("Sequence number", sequence_number);
             break;
           default:
             log_invalid_choice_id(security_header_type, "nas_5gs_hdr");
         }
-        j.write_int("Message authentication code", message_authentication_code);
-        j.write_int("Sequence number", sequence_number);
+
       }
       break;
     case extended_protocol_discriminator_5gsm:
